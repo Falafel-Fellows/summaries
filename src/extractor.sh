@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Get the name of the MP4 file.
+filePath=$1
 fileName=$(basename "$1")
 
-# Extract the closed captions from the MP4 file.
-ffmpeg -i "../media/$fileName" "../media/$fileName.vtt"
+ffmpeg -i $filePath "../media/$fileName.vtt"
