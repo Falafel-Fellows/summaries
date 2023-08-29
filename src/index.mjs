@@ -48,11 +48,18 @@ const chunkLength = 35000
 const totalSubtitleSize = fs.statSync(subtitleFile).size
 const numberOfChunks = Math.ceil(totalSubtitleSize / chunkLength)
 const chunkStarts = Array(numberOfChunks).fill(null).map((item, index) => index*chunkLength)
+console.log({chunkStarts})
+
 let timestamps = []
+
 // TODO: figure out why order of the chunks are not preserved
-Promise.all(chunkStarts.map(async (startPosition, partNumber) => {
+const chunks = await Promise.all(chunkStarts.map((startPosition) => {
+  return readChunk(subtitleFile, {length: chunkLength, startPosition})
+}))
+
+Promise.all(chunks.map((chunk, partNumber) => {
   const systemMessage = `Here is the part number ${partNumber}, your job is to summarize it`
-  const textToAnalyze = (await readChunk(subtitleFile, {length: chunkLength, startPosition})).toString();
+  const textToAnalyze = chunk.toString()
   const timestampRegex = /(\d{2}:\d{2}:\d{2}\.\d{3})/;
   // Find the first match using the regex
   const firstTimestampMatch = textToAnalyze.match(timestampRegex);
@@ -62,6 +69,7 @@ Promise.all(chunkStarts.map(async (startPosition, partNumber) => {
   timestamps.push(firstTimestamp)
   return summarize(textToAnalyze, systemMessage)
 })).then(async summaries => {
+  console.log({timestamps})
   const summariesText = summaries.reduce((acc, curr, index) => {
     return `${acc}\n ${timestamps[index]}\n ${curr.data.choices[0].message.content}`
   }, "")
