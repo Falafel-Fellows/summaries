@@ -2,6 +2,9 @@ import { Configuration, OpenAIApi } from "openai";
 import {readChunk} from 'read-chunk';
 import { text } from "stream/consumers";
 import fs from "fs"
+import assert from "node:assert"
+
+assert(process.env.OPENAI_API_KEY, "missing API KEY")
 
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
