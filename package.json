@@ -1,0 +1,16 @@
+{
+  "name": "summaries",
+  "version": "1.0.0",
+  "description": "Experiments with Google Meet recordings Closed Captions and ChatGPT",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "openai": "^3.3.0",
+    "read-chunk": "^4.0.3"
+  }
+}
