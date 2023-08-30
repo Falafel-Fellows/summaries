@@ -16,14 +16,14 @@ const subtitleFile = process.argv[2]
 const chatCompletionDefaultConfig = {
     model: "gpt-3.5-turbo-16k",
     temperature: 1,
-    max_tokens: 256,
     top_p: 1,
     frequency_penalty: 0,
     presence_penalty: 0,
 }
-const summarize = async (textToAnalyze, systemMessage) => {
+const summarize = async (textToAnalyze, systemMessage, maxTokens = 1024) => {
   const response = await openai.createChatCompletion({
     ...chatCompletionDefaultConfig,
+    max_tokens:  maxTokens,
     messages: [
       {
         "role": "system",
@@ -71,10 +71,12 @@ Promise.all(chunks.map((chunk, partNumber) => {
 })).then(async summaries => {
   console.log({timestamps})
   const summariesText = summaries.reduce((acc, curr, index) => {
+    console.log(curr.data.choices[0].finish_reason)
     return `${acc}\n ${timestamps[index]}\n ${curr.data.choices[0].message.content}`
   }, "")
   console.log(summariesText)
-  const systemMessage = `You summarize text, the provided input will be parts of a meeting.`
+  //const systemMessage = `You summarize text, the provided input will be parts of a meeting. Split your summary into topics.`
+  const systemMessage = `You summarize text, the provided input will be parts of a meeting. Identify the main topics discussed and list them.`
   const finalSummary = await summarize(summariesText, systemMessage)
   console.log(JSON.stringify(finalSummary.data, " ", 2))
 })
