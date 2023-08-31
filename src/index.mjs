@@ -1,6 +1,5 @@
 import { Configuration, OpenAIApi } from "openai";
 import {readChunk} from 'read-chunk';
-import { text } from "stream/consumers";
 import fs from "fs"
 import assert from "node:assert"
 
@@ -12,6 +11,7 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 const subtitleFile = process.argv[2]
+const folderPath = process.argv[3]
 
 const chatCompletionDefaultConfig = {
     model: "gpt-3.5-turbo-16k",
@@ -20,6 +20,12 @@ const chatCompletionDefaultConfig = {
     frequency_penalty: 0,
     presence_penalty: 0,
 }
+
+// write a function to save a json in a file
+const writeToFile = (json, path) => {
+  fs.writeFileSync(path, JSON.stringify(json))
+}
+
 const summarize = async (textToAnalyze, systemMessage, maxTokens = 1024) => {
   const response = await openai.createChatCompletion({
     ...chatCompletionDefaultConfig,
@@ -40,11 +46,7 @@ const summarize = async (textToAnalyze, systemMessage, maxTokens = 1024) => {
   return response;
 }
 
-
-const startPosition = 0
 const chunkLength = 35000
-
-
 const totalSubtitleSize = fs.statSync(subtitleFile).size
 const numberOfChunks = Math.ceil(totalSubtitleSize / chunkLength)
 const chunkStarts = Array(numberOfChunks).fill(null).map((item, index) => index*chunkLength)
@@ -52,7 +54,6 @@ console.log({chunkStarts})
 
 let timestamps = []
 
-// TODO: figure out why order of the chunks are not preserved
 const chunks = await Promise.all(chunkStarts.map((startPosition) => {
   return readChunk(subtitleFile, {length: chunkLength, startPosition})
 }))
@@ -70,14 +71,22 @@ Promise.all(chunks.map((chunk, partNumber) => {
   return summarize(textToAnalyze, systemMessage)
 })).then(async summaries => {
   console.log({timestamps})
+  summaries.forEach((summary, index) => {
+    if (summary) {
+      writeToFile({...summary.data, timestamp: timestamps[index]}, `${folderPath}/summary${index}.json`)
+    } else {
+      console.log(`No summary for part ${index}`)
+    }
+  })
+
   const summariesText = summaries.reduce((acc, curr, index) => {
-    console.log(curr.data.choices[0].finish_reason)
     return `${acc}\n ${timestamps[index]}\n ${curr.data.choices[0].message.content}`
   }, "")
   console.log(summariesText)
   //const systemMessage = `You summarize text, the provided input will be parts of a meeting. Split your summary into topics.`
   const systemMessage = `You summarize text, the provided input will be parts of a meeting. Identify the main topics discussed and list them.`
   const finalSummary = await summarize(summariesText, systemMessage)
+  writeToFile(finalSummary.data, `${folderPath}/topics.json`)
   console.log(JSON.stringify(finalSummary.data, " ", 2))
 })
 
